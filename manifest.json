@@ -1,0 +1,21 @@
+{
+  "manifest_version": 2,
+  "name": "Tab Swipee",
+  "version": "1.0",
+  "description": "Swipe through your tabs - left to close, right to keep",
+  "permissions": ["tabs", "storage", "sessions"],
+  "browser_action": {
+    "default_icon": {
+      "48": "icons/icon-48.svg",
+      "96": "icons/icon-96.svg"
+    },
+    "default_title": "Tab Swipee"
+  },
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "icons": {
+    "48": "icons/icon-48.svg",
+    "96": "icons/icon-96.svg"
+  }
+}

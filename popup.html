@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tab Swipe</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body tabindex="-1">
+  <div class="container">
+    <button class="undo-btn hidden" id="undoBtn" title="Undo last action">↩</button>
+    <header>
+      <h1>Tab Swipe</h1>
+      <p class="progress" id="progress">Loading...</p>
+      <div class="lifetime-stats" id="lifetimeStats">
+        <span class="stat-icon">🔥</span>
+        <span id="totalClosed">0</span> tabs closed lifetime
+      </div>
+    </header>
+
+    <div class="card-container">
+      <div class="card" id="card">
+        <img class="favicon" id="favicon" src="" alt="Tab icon">
+        <h2 class="title" id="title"></h2>
+        <a class="url" id="url" href="#" target="_blank"></a>
+        <div class="last-active" id="lastActive">
+          <span class="clock-icon">🕐</span>
+          <span id="lastActiveTime">Loading...</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="preview-toggle">
+      <label class="toggle">
+        <input type="checkbox" id="previewToggle">
+        <span class="toggle-slider"></span>
+      </label>
+      <span class="toggle-label">Preview tabs</span>
+    </div>
+
+    <div class="controls">
+      <div class="control-hint left">
+        <span class="key">&larr;</span>
+        <span class="action">Close</span>
+      </div>
+      <button class="finish-btn" id="finishBtn">Finish</button>
+      <div class="control-hint right">
+        <span class="key">&rarr;</span>
+        <span class="action">Keep</span>
+      </div>
+    </div>
+
+    <div class="summary hidden" id="summary">
+      <h2>All done!</h2>
+      <div class="session-stats">
+        <h3>This session</h3>
+        <div class="session-numbers">
+          <div class="stat-box closed">
+            <span class="stat-value" id="closedCount">0</span>
+            <span class="stat-label">closed</span>
+          </div>
+          <div class="stat-box kept">
+            <span class="stat-value" id="keptCount">0</span>
+            <span class="stat-label">kept</span>
+          </div>
+        </div>
+      </div>
+      <div class="total-stats">
+        <span class="big-number" id="totalClosedFinal">0</span>
+        <span class="total-label">Tabs closed - all time</span>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
