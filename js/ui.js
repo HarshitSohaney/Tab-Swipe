@@ -23,7 +23,14 @@ export const elements = {
   totalClosedFinalEl: document.getElementById('totalClosedFinal'),
   previewToggle: document.getElementById('previewToggle'),
   undoBtn: document.getElementById('undoBtn'),
-  finishBtn: document.getElementById('finishBtn')
+  finishBtn: document.getElementById('finishBtn'),
+  // Next card elements
+  nextCard: document.getElementById('nextCard'),
+  nextFavicon: document.getElementById('nextFavicon'),
+  nextTitle: document.getElementById('nextTitle'),
+  nextUrl: document.getElementById('nextUrl'),
+  nextLastActiveEl: document.getElementById('nextLastActive'),
+  nextLastActiveTime: document.getElementById('nextLastActiveTime')
 };
 
 export function updateLifetimeDisplay() {
@@ -37,6 +44,7 @@ export function updateProgress() {
 }
 
 export function showEmptyState() {
+  elements.nextCard.classList.add('hidden');
   elements.cardContainer.innerHTML = `
     <div class="empty-state">
       <h2>No tabs to review!</h2>
@@ -56,6 +64,7 @@ export function showError() {
 }
 
 export function showSummary() {
+  elements.nextCard.classList.add('hidden');
   elements.cardContainer.classList.add('hidden');
   document.querySelector('.controls').classList.add('hidden');
   document.querySelector('.preview-toggle').classList.add('hidden');
@@ -66,6 +75,52 @@ export function showSummary() {
   elements.keptCountEl.textContent = state.keptCount;
   elements.totalClosedFinalEl.textContent = state.totalClosedLifetime;
   elements.progress.textContent = 'Complete!';
+}
+
+function populateNextCard() {
+  const nextIndex = state.currentIndex + 1;
+
+  if (nextIndex >= state.tabs.length) {
+    // No next tab, hide the next card
+    elements.nextCard.classList.add('hidden');
+    return;
+  }
+
+  const tab = state.tabs[nextIndex];
+  elements.nextCard.classList.remove('hidden');
+
+  // Set favicon
+  elements.nextFavicon.src = tab.favIconUrl || DEFAULT_FAVICON;
+
+  // Set title
+  elements.nextTitle.textContent = tab.title || 'Untitled';
+
+  // Set URL
+  try {
+    elements.nextUrl.textContent = new URL(tab.url).hostname;
+  } catch {
+    elements.nextUrl.textContent = tab.url;
+  }
+
+  // Set last active time
+  if (tab.lastAccessed) {
+    const timeInfo = formatRelativeTime(tab.lastAccessed);
+    elements.nextLastActiveTime.textContent = `Last active: ${timeInfo.text}`;
+    elements.nextLastActiveEl.className = 'last-active';
+    if (timeInfo.age === 'recent') {
+      elements.nextLastActiveEl.classList.add('recent');
+    } else if (timeInfo.age === 'old') {
+      elements.nextLastActiveEl.classList.add('old');
+    }
+  } else {
+    elements.nextLastActiveTime.textContent = 'Last active: Unknown';
+    elements.nextLastActiveEl.className = 'last-active';
+  }
+
+  // Reset next card state without transition (to prevent it sliding back)
+  elements.nextCard.className = 'card next-card no-transition';
+  void elements.nextCard.offsetHeight;
+  elements.nextCard.classList.remove('no-transition');
 }
 
 export async function showCurrentTab() {
@@ -122,8 +177,14 @@ export async function showCurrentTab() {
     elements.lastActiveEl.className = 'last-active';
   }
 
-  // Reset card state
-  elements.card.className = 'card';
+  // Reset card state without transition (to prevent slide-in animation)
+  elements.card.className = 'card no-transition';
+  // Force reflow to apply the no-transition class before removing it
+  void elements.card.offsetHeight;
+  elements.card.classList.remove('no-transition');
+
+  // Populate the next card preview
+  populateNextCard();
 }
 
 export function showUndoButton() {
@@ -159,6 +220,11 @@ export function animateSwipe(direction) {
   } else {
     elements.controlRight.classList.add('active');
     elements.card.classList.add('swipe-right');
+  }
+
+  // Trigger pop animation on the next card
+  if (!elements.nextCard.classList.contains('hidden')) {
+    elements.nextCard.classList.add('pop');
   }
 }
 
