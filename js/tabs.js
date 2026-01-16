@@ -1,6 +1,6 @@
 // Tab operations for Tab Swipe
 
-import { state, getCurrentTab, getNextTab, getVisibleCount } from './state.js';
+import { state, getCurrentTab, getNextTab, getVisibleCount, getDuplicatesOfCurrent } from './state.js';
 import { TabItem } from './TabItem.js';
 import { saveStats } from './storage.js';
 import {
@@ -77,12 +77,15 @@ export async function closeTab() {
     showUndoButton();
   } catch (error) {
     console.error('Error closing tab:', error);
+    state.isAnimating = false;
+    clearSwipeAnimation('left');
+    return;
   }
 
-  setTimeout(async () => {
+  setTimeout(() => {
     clearSwipeAnimation('left');
     updateProgress();
-    await showCurrentTab();
+    showCurrentTab().catch(err => console.error('Error showing tab:', err));
     state.isAnimating = false;
   }, ANIMATION_DURATION);
 }
@@ -99,10 +102,10 @@ export async function keepTab() {
   state.lastAction = tab;
   showUndoButton();
 
-  setTimeout(async () => {
+  setTimeout(() => {
     clearSwipeAnimation('right');
     updateProgress();
-    await showCurrentTab();
+    showCurrentTab().catch(err => console.error('Error showing tab:', err));
     state.isAnimating = false;
   }, ANIMATION_DURATION);
 }
@@ -118,12 +121,15 @@ export async function undo() {
       if (tab.sessionId) {
         await browser.sessions.restore(tab.sessionId);
       }
+      // Only decrement counters after successful restoration
       state.closedCount--;
       state.totalClosedLifetime--;
       updateLifetimeDisplay();
       await saveStats();
     } catch (error) {
       console.error('Error restoring tab:', error);
+      state.isAnimating = false;
+      return;
     }
   } else if (tab.action === 'kept') {
     state.keptCount--;
@@ -133,7 +139,37 @@ export async function undo() {
   state.lastAction = null;
 
   updateProgress();
-  await showCurrentTab();
+  try {
+    await showCurrentTab();
+  } catch (error) {
+    console.error('Error showing tab:', error);
+  }
   hideUndoButton();
   state.isAnimating = false;
+}
+
+export async function closeDuplicates() {
+  const dupes = getDuplicatesOfCurrent();
+  if (dupes.length === 0) return;
+
+  for (const tab of dupes) {
+    try {
+      await browser.tabs.remove(tab.id);
+      tab.markClosed(null); // No undo for bulk close
+      state.closedCount++;
+      state.totalClosedLifetime++;
+    } catch (error) {
+      console.error('Error closing duplicate tab:', error);
+    }
+  }
+
+  updateLifetimeDisplay();
+  await saveStats();
+  updateProgress();
+
+  try {
+    await showCurrentTab();
+  } catch (error) {
+    console.error('Error showing tab:', error);
+  }
 }

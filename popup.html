@@ -3,14 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https:;">
   <title>Tab Swipe</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body tabindex="-1">
   <div class="container">
     <div class="top-buttons">
-      <button class="filter-btn" id="filterBtn" title="Filter by site">⚙</button>
-      <button class="undo-btn hidden" id="undoBtn" title="Undo last action">↩</button>
+      <button class="filter-btn" id="filterBtn" title="Filter by site">
+        <img src="icons/icon-settings-48.svg" alt="Filter">
+      </button>
+      <button class="undo-btn hidden" id="undoBtn" title="Undo last action">
+        <img src="icons/icons-undo-50.png" alt="Undo">
+      </button>
     </div>
 
     <div class="filter-panel hidden" id="filterPanel">
@@ -50,6 +55,7 @@
           <span class="clock-icon">🕐</span>
           <span id="lastActiveTime">Loading...</span>
         </div>
+        <button class="close-dupes-btn hidden" id="closeDuplicatesBtn">Close duplicates</button>
       </div>
     </div>
 

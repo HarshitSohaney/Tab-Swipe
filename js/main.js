@@ -1,8 +1,8 @@
 // Main entry point for Tab Swipe
 
-import { state, getVisibleCount, getCurrentTab } from './state.js';
+import { state, getCurrentTab } from './state.js';
 import { loadStats, savePreviewPreference } from './storage.js';
-import { loadTabs, closeTab, keepTab, undo, switchToTab, applyFilter, clearFilter } from './tabs.js';
+import { loadTabs, closeTab, keepTab, undo, switchToTab, applyFilter, clearFilter, closeDuplicates } from './tabs.js';
 import {
   elements,
   updateLifetimeDisplay,
@@ -90,8 +90,18 @@ elements.controlLeft.addEventListener('click', closeTab);
 elements.controlRight.addEventListener('click', keepTab);
 elements.undoBtn.addEventListener('click', undo);
 elements.finishBtn.addEventListener('click', showSummary);
+elements.closeDuplicatesBtn.addEventListener('click', closeDuplicates);
 
 // Filter handlers
+async function refreshTabView(count) {
+  updateProgress();
+  if (count === 0) {
+    showEmptyState();
+  } else {
+    await showCurrentTab();
+  }
+}
+
 elements.filterBtn.addEventListener('click', toggleFilterPanel);
 
 elements.filterApplyBtn.addEventListener('click', async () => {
@@ -100,13 +110,7 @@ elements.filterApplyBtn.addEventListener('click', async () => {
     const count = applyFilter(filterValue);
     updateFilterUI();
     hideFilterPanel();
-    updateProgress();
-
-    if (count === 0) {
-      showEmptyState();
-    } else {
-      await showCurrentTab();
-    }
+    await refreshTabView(count);
   }
 });
 
@@ -114,13 +118,7 @@ elements.filterClearBtn.addEventListener('click', async () => {
   const count = clearFilter();
   updateFilterUI();
   hideFilterPanel();
-  updateProgress();
-
-  if (count === 0) {
-    showEmptyState();
-  } else {
-    await showCurrentTab();
-  }
+  await refreshTabView(count);
 });
 
 elements.filterInput.addEventListener('keydown', (e) => {
@@ -136,13 +134,7 @@ elements.continueAllBtn.addEventListener('click', async () => {
   const count = clearFilter();
   updateFilterUI();
   resetMainView();
-  updateProgress();
-
-  if (count === 0) {
-    showEmptyState();
-  } else {
-    await showCurrentTab();
-  }
+  await refreshTabView(count);
 });
 
 // Close filter panel when clicking outside

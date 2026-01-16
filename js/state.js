@@ -1,16 +1,16 @@
 // State management for Tab Swipe
 
 export const state = {
-  allTabs: [], // All TabItem objects loaded this session
-  currentIndex: 0,
-  closedCount: 0,
-  keptCount: 0,
-  totalClosedLifetime: 0,
-  isAnimating: false,
-  previewMode: false,
-  originalTabId: null,
-  lastAction: null, // The last TabItem that was acted on
-  filterHost: null // Current filter host (e.g., 'youtube.com')
+  allTabs: [],              // All TabItem objects loaded this session
+  currentIndex: 0,          // Index into visible tabs array
+  closedCount: 0,           // Tabs closed this session
+  keptCount: 0,             // Tabs kept this session
+  totalClosedLifetime: 0,   // Tabs closed across all sessions (persisted)
+  isAnimating: false,       // Lock to prevent actions during animation
+  previewMode: false,       // Whether to focus tabs while swiping
+  originalTabId: null,      // Tab that was active when popup opened
+  lastAction: null,         // Last TabItem acted on (for undo)
+  filterHost: null          // Domain filter (e.g., 'youtube.com')
 };
 
 // Get tabs to display (unprocessed, matching current filter)
@@ -35,6 +35,16 @@ export function getNextTab() {
 // Get total visible tab count
 export function getVisibleCount() {
   return getVisibleTabs().length;
+}
+
+// Get duplicates of the current tab (same URL, excluding current)
+export function getDuplicatesOfCurrent() {
+  const current = getCurrentTab();
+  if (!current) return [];
+
+  return getVisibleTabs().filter(tab =>
+    tab.id !== current.id && tab.url === current.url
+  );
 }
 
 export function resetSessionStats() {

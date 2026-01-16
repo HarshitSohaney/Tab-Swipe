@@ -1,6 +1,6 @@
 // UI/DOM operations for Tab Swipe
 
-import { state, getCurrentTab, getNextTab, getVisibleCount } from './state.js';
+import { state, getCurrentTab, getNextTab, getVisibleCount, getDuplicatesOfCurrent } from './state.js';
 import { formatRelativeTime, DEFAULT_FAVICON } from './utils.js';
 import { switchToTab } from './tabs.js';
 
@@ -37,8 +37,21 @@ export const elements = {
   filterInput: document.getElementById('filterInput'),
   filterApplyBtn: document.getElementById('filterApplyBtn'),
   filterClearBtn: document.getElementById('filterClearBtn'),
-  continueAllBtn: document.getElementById('continueAllBtn')
+  continueAllBtn: document.getElementById('continueAllBtn'),
+  // Duplicates
+  closeDuplicatesBtn: document.getElementById('closeDuplicatesBtn')
 };
+
+// Track current tab ID for URL click handler
+let currentDisplayedTabId = null;
+
+// Set up URL click handler once
+elements.url.addEventListener('click', (e) => {
+  e.preventDefault();
+  if (currentDisplayedTabId) {
+    browser.tabs.update(currentDisplayedTabId, { active: true });
+  }
+});
 
 export function updateLifetimeDisplay() {
   elements.totalClosedEl.textContent = state.totalClosedLifetime;
@@ -47,6 +60,18 @@ export function updateLifetimeDisplay() {
 export function updateProgress() {
   const count = getVisibleCount();
   elements.progress.textContent = count === 1 ? '1 tab left' : `${count} tabs left`;
+}
+
+export function updateDuplicatesButton() {
+  const dupes = getDuplicatesOfCurrent();
+  if (dupes.length > 0) {
+    elements.closeDuplicatesBtn.textContent = dupes.length === 1
+      ? 'Close 1 duplicate'
+      : `Close ${dupes.length} duplicates`;
+    elements.closeDuplicatesBtn.classList.remove('hidden');
+  } else {
+    elements.closeDuplicatesBtn.classList.add('hidden');
+  }
 }
 
 export function showEmptyState() {
@@ -170,12 +195,8 @@ export async function showCurrentTab() {
 
   // Set URL - use hostname getter from TabItem
   elements.url.textContent = tab.hostname || tab.url;
-  elements.url.href = '#';
   elements.url.title = tab.url;
-  elements.url.onclick = (e) => {
-    e.preventDefault();
-    browser.tabs.update(tab.id, { active: true });
-  };
+  currentDisplayedTabId = tab.id;
 
   // Set last active time
   if (tab.lastAccessed) {
@@ -202,6 +223,9 @@ export async function showCurrentTab() {
 
   // Populate the next card preview
   populateNextCard();
+
+  // Check for duplicates
+  updateDuplicatesButton();
 }
 
 export function showUndoButton() {
@@ -251,6 +275,8 @@ export function clearSwipeAnimation(direction) {
   } else {
     elements.controlRight.classList.remove('active');
   }
+  // Remove pop animation class from next card
+  elements.nextCard.classList.remove('pop');
 }
 
 // Filter UI functions
