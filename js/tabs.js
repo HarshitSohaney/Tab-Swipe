@@ -1,6 +1,7 @@
 // Tab operations for Tab Swipe
 
-import { state } from './state.js';
+import { state, getCurrentTab, getNextTab, getVisibleCount } from './state.js';
+import { TabItem } from './TabItem.js';
 import { saveStats } from './storage.js';
 import {
   updateLifetimeDisplay,
@@ -18,7 +19,6 @@ export async function switchToTab(tabId) {
   if (!state.previewMode) return;
   try {
     await browser.tabs.update(tabId, { active: true });
-    // Refocus the popup window so keyboard events keep working
     const currentWindow = await browser.windows.getCurrent();
     await browser.windows.update(currentWindow.id, { focused: true });
   } catch (error) {
@@ -27,48 +27,60 @@ export async function switchToTab(tabId) {
 }
 
 export async function loadTabs() {
-  const allTabs = await browser.tabs.query({ windowType: 'normal' });
-  const activeTab = allTabs.find(tab => tab.active);
+  const browserTabs = await browser.tabs.query({ windowType: 'normal' });
+  const activeTab = browserTabs.find(tab => tab.active);
   state.originalTabId = activeTab?.id;
 
-  // Filter out active tab and sort by lastAccessed (oldest first)
-  state.tabs = allTabs
+  // Create TabItem objects, excluding active tab, sorted by lastAccessed
+  state.allTabs = browserTabs
     .filter(tab => !tab.active)
-    .sort((a, b) => (a.lastAccessed || 0) - (b.lastAccessed || 0));
+    .sort((a, b) => (a.lastAccessed || 0) - (b.lastAccessed || 0))
+    .map(tab => new TabItem(tab));
 
-  return state.tabs;
+  state.currentIndex = 0;
+  return getVisibleCount();
+}
+
+export function applyFilter(hostFilter) {
+  state.filterHost = hostFilter?.trim().toLowerCase() || null;
+  state.currentIndex = 0;
+  return getVisibleCount();
+}
+
+export function clearFilter() {
+  state.filterHost = null;
+  state.currentIndex = 0;
+  return getVisibleCount();
 }
 
 export async function closeTab() {
-  if (state.isAnimating || state.currentIndex >= state.tabs.length) return;
+  const tab = getCurrentTab();
+  if (state.isAnimating || !tab) return;
 
   state.isAnimating = true;
-  const tab = state.tabs[state.currentIndex];
-
-  // Visual feedback
   animateSwipe('left');
 
-  // Close the tab
   try {
     await browser.tabs.remove(tab.id);
-    state.closedCount++;
-    state.totalClosedLifetime++;
-    updateLifetimeDisplay();
-    await saveStats();
 
-    // Track for undo - get most recent closed session
+    // Get session ID for potential undo
     const sessions = await browser.sessions.getRecentlyClosed({ maxResults: 1 });
     const sessionId = sessions[0]?.tab?.sessionId;
-    state.lastAction = { type: 'close', tab, index: state.currentIndex, sessionId };
+
+    tab.markClosed(sessionId);
+    state.closedCount++;
+    state.totalClosedLifetime++;
+    state.lastAction = tab;
+
+    updateLifetimeDisplay();
+    await saveStats();
     showUndoButton();
   } catch (error) {
     console.error('Error closing tab:', error);
   }
 
-  // Wait for animation then show next
   setTimeout(async () => {
     clearSwipeAnimation('left');
-    state.currentIndex++;
     updateProgress();
     await showCurrentTab();
     state.isAnimating = false;
@@ -76,24 +88,19 @@ export async function closeTab() {
 }
 
 export async function keepTab() {
-  if (state.isAnimating || state.currentIndex >= state.tabs.length) return;
+  const tab = getCurrentTab();
+  if (state.isAnimating || !tab) return;
 
   state.isAnimating = true;
-  const tab = state.tabs[state.currentIndex];
-
-  // Visual feedback
   animateSwipe('right');
 
+  tab.markKept();
   state.keptCount++;
-
-  // Track for undo
-  state.lastAction = { type: 'keep', tab, index: state.currentIndex };
+  state.lastAction = tab;
   showUndoButton();
 
-  // Wait for animation then show next
   setTimeout(async () => {
     clearSwipeAnimation('right');
-    state.currentIndex++;
     updateProgress();
     await showCurrentTab();
     state.isAnimating = false;
@@ -101,15 +108,15 @@ export async function keepTab() {
 }
 
 export async function undo() {
-  if (!state.lastAction || state.isAnimating) return;
+  const tab = state.lastAction;
+  if (!tab || state.isAnimating) return;
 
   state.isAnimating = true;
 
-  if (state.lastAction.type === 'close') {
-    // Restore the closed tab
+  if (tab.action === 'closed') {
     try {
-      if (state.lastAction.sessionId) {
-        await browser.sessions.restore(state.lastAction.sessionId);
+      if (tab.sessionId) {
+        await browser.sessions.restore(tab.sessionId);
       }
       state.closedCount--;
       state.totalClosedLifetime--;
@@ -118,17 +125,15 @@ export async function undo() {
     } catch (error) {
       console.error('Error restoring tab:', error);
     }
-  } else if (state.lastAction.type === 'keep') {
+  } else if (tab.action === 'kept') {
     state.keptCount--;
   }
 
-  // Go back to previous card
-  state.currentIndex--;
+  tab.reset();
+  state.lastAction = null;
+
   updateProgress();
   await showCurrentTab();
-
-  // Clear last action and hide undo button
-  state.lastAction = null;
   hideUndoButton();
   state.isAnimating = false;
 }

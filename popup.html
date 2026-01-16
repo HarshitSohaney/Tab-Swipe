@@ -8,7 +8,21 @@
 </head>
 <body tabindex="-1">
   <div class="container">
-    <button class="undo-btn hidden" id="undoBtn" title="Undo last action">↩</button>
+    <div class="top-buttons">
+      <button class="filter-btn" id="filterBtn" title="Filter by site">⚙</button>
+      <button class="undo-btn hidden" id="undoBtn" title="Undo last action">↩</button>
+    </div>
+
+    <div class="filter-panel hidden" id="filterPanel">
+      <div class="filter-content">
+        <input type="text" id="filterInput" placeholder="e.g. youtube.com" autocomplete="off">
+        <div class="filter-actions">
+          <button class="filter-apply-btn" id="filterApplyBtn">Apply Filter</button>
+          <button class="filter-clear-btn hidden" id="filterClearBtn">Clear Filter</button>
+        </div>
+      </div>
+    </div>
+
     <header>
       <h1>Tab Swipe</h1>
       <p class="progress" id="progress">Loading...</p>
@@ -78,6 +92,7 @@
         <span class="big-number" id="totalClosedFinal">0</span>
         <span class="total-label">Tabs closed - all time</span>
       </div>
+      <button class="continue-all-btn hidden" id="continueAllBtn">Continue to all tabs</button>
     </div>
   </div>
 

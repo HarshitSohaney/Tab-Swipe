@@ -21,10 +21,146 @@ body {
   position: relative;
 }
 
-.undo-btn {
+/* Top buttons container */
+.top-buttons {
   position: absolute;
   top: 16px;
   right: 16px;
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+
+/* Filter button */
+.filter-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.filter-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.filter-btn:active {
+  transform: scale(0.95);
+}
+
+.filter-btn.active {
+  background: #4ade80;
+  color: #1f2937;
+}
+
+/* Filter panel */
+.filter-panel {
+  position: absolute;
+  top: 60px;
+  right: 16px;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  min-width: 220px;
+}
+
+.filter-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.filter-panel input {
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1f2937;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.filter-panel input:focus {
+  border-color: #4ade80;
+}
+
+.filter-panel input::placeholder {
+  color: #9ca3af;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-apply-btn {
+  flex: 1;
+  padding: 8px 12px;
+  background: #4ade80;
+  border: none;
+  border-radius: 8px;
+  color: #1f2937;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.filter-apply-btn:hover {
+  background: #22c55e;
+}
+
+.filter-clear-btn {
+  flex: 1;
+  padding: 8px 12px;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 8px;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.filter-clear-btn:hover {
+  background: #e5e7eb;
+}
+
+/* Continue to all tabs button */
+.continue-all-btn {
+  margin-top: 20px;
+  padding: 12px 24px;
+  background: #4ade80;
+  border: none;
+  border-radius: 12px;
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.continue-all-btn:hover {
+  background: #22c55e;
+  transform: scale(1.02);
+}
+
+.continue-all-btn:active {
+  transform: scale(0.98);
+}
+
+.undo-btn {
   width: 36px;
   height: 36px;
   border: none;
@@ -37,7 +173,6 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10;
 }
 
 .undo-btn:hover {

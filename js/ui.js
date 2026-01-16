@@ -1,6 +1,6 @@
 // UI/DOM operations for Tab Swipe
 
-import { state } from './state.js';
+import { state, getCurrentTab, getNextTab, getVisibleCount } from './state.js';
 import { formatRelativeTime, DEFAULT_FAVICON } from './utils.js';
 import { switchToTab } from './tabs.js';
 
@@ -30,7 +30,14 @@ export const elements = {
   nextTitle: document.getElementById('nextTitle'),
   nextUrl: document.getElementById('nextUrl'),
   nextLastActiveEl: document.getElementById('nextLastActive'),
-  nextLastActiveTime: document.getElementById('nextLastActiveTime')
+  nextLastActiveTime: document.getElementById('nextLastActiveTime'),
+  // Filter elements
+  filterBtn: document.getElementById('filterBtn'),
+  filterPanel: document.getElementById('filterPanel'),
+  filterInput: document.getElementById('filterInput'),
+  filterApplyBtn: document.getElementById('filterApplyBtn'),
+  filterClearBtn: document.getElementById('filterClearBtn'),
+  continueAllBtn: document.getElementById('continueAllBtn')
 };
 
 export function updateLifetimeDisplay() {
@@ -38,20 +45,36 @@ export function updateLifetimeDisplay() {
 }
 
 export function updateProgress() {
-  const total = state.tabs.length;
-  const current = Math.min(state.currentIndex + 1, total);
-  elements.progress.textContent = `${current} of ${total} tabs`;
+  const count = getVisibleCount();
+  elements.progress.textContent = count === 1 ? '1 tab left' : `${count} tabs left`;
 }
 
 export function showEmptyState() {
   elements.nextCard.classList.add('hidden');
-  elements.cardContainer.innerHTML = `
-    <div class="empty-state">
+  elements.card.classList.add('hidden');
+  elements.finishBtn.classList.add('hidden');
+
+  // Add empty state message if not already present
+  let emptyState = elements.cardContainer.querySelector('.empty-state');
+  if (!emptyState) {
+    emptyState = document.createElement('div');
+    emptyState.className = 'empty-state';
+    emptyState.innerHTML = `
       <h2>No tabs to review!</h2>
       <p>Open some more tabs and try again.</p>
-    </div>
-  `;
-  elements.finishBtn.classList.add('hidden');
+    `;
+    elements.cardContainer.appendChild(emptyState);
+  }
+  emptyState.classList.remove('hidden');
+}
+
+export function hideEmptyState() {
+  const emptyState = elements.cardContainer.querySelector('.empty-state');
+  if (emptyState) {
+    emptyState.classList.add('hidden');
+  }
+  elements.card.classList.remove('hidden');
+  elements.finishBtn.classList.remove('hidden');
 }
 
 export function showError() {
@@ -75,18 +98,24 @@ export function showSummary() {
   elements.keptCountEl.textContent = state.keptCount;
   elements.totalClosedFinalEl.textContent = state.totalClosedLifetime;
   elements.progress.textContent = 'Complete!';
+
+  // Show continue button if in filter mode and there are unprocessed tabs remaining
+  const unprocessedCount = state.allTabs.filter(t => !t.processed).length;
+  if (state.filterHost && unprocessedCount > 0) {
+    showContinueAllButton();
+  } else {
+    hideContinueAllButton();
+  }
 }
 
 function populateNextCard() {
-  const nextIndex = state.currentIndex + 1;
+  const tab = getNextTab();
 
-  if (nextIndex >= state.tabs.length) {
-    // No next tab, hide the next card
+  if (!tab) {
     elements.nextCard.classList.add('hidden');
     return;
   }
 
-  const tab = state.tabs[nextIndex];
   elements.nextCard.classList.remove('hidden');
 
   // Set favicon
@@ -95,12 +124,8 @@ function populateNextCard() {
   // Set title
   elements.nextTitle.textContent = tab.title || 'Untitled';
 
-  // Set URL
-  try {
-    elements.nextUrl.textContent = new URL(tab.url).hostname;
-  } catch {
-    elements.nextUrl.textContent = tab.url;
-  }
+  // Set URL - use hostname getter from TabItem
+  elements.nextUrl.textContent = tab.hostname || tab.url;
 
   // Set last active time
   if (tab.lastAccessed) {
@@ -124,12 +149,15 @@ function populateNextCard() {
 }
 
 export async function showCurrentTab() {
-  if (state.currentIndex >= state.tabs.length) {
+  const tab = getCurrentTab();
+
+  if (!tab) {
     showSummary();
     return;
   }
 
-  const tab = state.tabs[state.currentIndex];
+  // Hide empty state if it was showing
+  hideEmptyState();
 
   // Switch to tab if preview mode is on
   await switchToTab(tab.id);
@@ -140,25 +168,14 @@ export async function showCurrentTab() {
   // Set title
   elements.title.textContent = tab.title || 'Untitled';
 
-  // Set URL
-  try {
-    const displayUrl = new URL(tab.url).hostname;
-    elements.url.textContent = displayUrl;
-    elements.url.href = '#';
-    elements.url.title = tab.url;
-    elements.url.onclick = (e) => {
-      e.preventDefault();
-      browser.tabs.update(tab.id, { active: true });
-    };
-  } catch {
-    elements.url.textContent = tab.url;
-    elements.url.href = '#';
-    elements.url.title = tab.url;
-    elements.url.onclick = (e) => {
-      e.preventDefault();
-      browser.tabs.update(tab.id, { active: true });
-    };
-  }
+  // Set URL - use hostname getter from TabItem
+  elements.url.textContent = tab.hostname || tab.url;
+  elements.url.href = '#';
+  elements.url.title = tab.url;
+  elements.url.onclick = (e) => {
+    e.preventDefault();
+    browser.tabs.update(tab.id, { active: true });
+  };
 
   // Set last active time
   if (tab.lastAccessed) {
@@ -234,4 +251,48 @@ export function clearSwipeAnimation(direction) {
   } else {
     elements.controlRight.classList.remove('active');
   }
+}
+
+// Filter UI functions
+export function toggleFilterPanel() {
+  elements.filterPanel.classList.toggle('hidden');
+  if (!elements.filterPanel.classList.contains('hidden')) {
+    elements.filterInput.focus();
+  }
+}
+
+export function hideFilterPanel() {
+  elements.filterPanel.classList.add('hidden');
+}
+
+export function updateFilterUI() {
+  if (state.filterHost) {
+    elements.filterBtn.classList.add('active');
+    elements.filterInput.value = state.filterHost;
+    elements.filterClearBtn.classList.remove('hidden');
+  } else {
+    elements.filterBtn.classList.remove('active');
+    elements.filterInput.value = '';
+    elements.filterClearBtn.classList.add('hidden');
+  }
+}
+
+export function showContinueAllButton() {
+  elements.continueAllBtn.classList.remove('hidden');
+}
+
+export function hideContinueAllButton() {
+  elements.continueAllBtn.classList.add('hidden');
+}
+
+export function resetMainView() {
+  // Show the card container and controls again
+  elements.cardContainer.classList.remove('hidden');
+  document.querySelector('.controls').classList.remove('hidden');
+  document.querySelector('.preview-toggle').classList.remove('hidden');
+  elements.finishBtn.classList.remove('hidden');
+  elements.card.classList.remove('hidden');
+  elements.summary.classList.add('hidden');
+  hideEmptyState();
+  hideContinueAllButton();
 }
